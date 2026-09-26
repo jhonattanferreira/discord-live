@@ -1,0 +1,9 @@
+# Segredos
+credentials.json
+token.json
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
