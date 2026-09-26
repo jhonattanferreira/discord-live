@@ -1,0 +1,5 @@
+# Só para rodar localmente com `pnpm dev`. Em produção use `pnpm wrangler secret put` e `pnpm google-login`.
+DISCORD_BOT_TOKEN=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=

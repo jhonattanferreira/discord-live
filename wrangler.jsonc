@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "discord-live-activity",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-25",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // API e o prefixo /.proxy do Discord passam pelo Worker antes dos arquivos estáticos
+    "run_worker_first": ["/api/*", "/.proxy/*"]
+  },
+  "kv_namespaces": [
+    // ID gerado por: pnpm wrangler kv namespace create MEETINGS
+    { "binding": "MEETINGS", "id": "cb846b63af89416fa2b5191c6569ca2c" }
+  ],
+  "vars": {
+    // Discord Developer Portal → sua aplicação → General Information → Application ID
+    "DISCORD_CLIENT_ID": "1553499814375850245"
+  },
+  "observability": { "enabled": true }
+}

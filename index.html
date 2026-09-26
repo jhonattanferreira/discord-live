@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Meet</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          "gg sans", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --bg: #1e1f22;
+        --card: #2b2d31;
+        --border: #3f4147;
+        --text: #f2f3f5;
+        --muted: #b5bac1;
+        --accent: #1a73e8;
+        --accent-hover: #1765cc;
+        --danger: #f23f43;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background:
+          radial-gradient(circle at 20% 0%, rgb(26 115 232 / 0.18), transparent 50%),
+          radial-gradient(circle at 80% 100%, rgb(52 168 83 / 0.12), transparent 50%),
+          var(--bg);
+        color: var(--text);
+      }
+      .card {
+        width: min(100%, 380px);
+        display: grid;
+        gap: 20px;
+        justify-items: center;
+        padding: 32px 28px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--card);
+        box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+        text-align: center;
+        animation: enter 0.35s ease-out;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      #status {
+        margin: -12px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      #code {
+        margin: 0;
+        padding: 10px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg);
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 18px;
+        letter-spacing: 0.04em;
+      }
+      button {
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: 0;
+        border-radius: 10px;
+        padding: 14px 20px;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+      }
+      button:hover {
+        background: var(--accent-hover);
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .card[data-state="error"] #status {
+        color: var(--danger);
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes enter {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card,
+        .spinner {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" data-state="loading">
+      <div class="logo" aria-hidden="true">
+        <!-- Ícone de câmera nas cores do Google Meet -->
+        <svg width="40" height="40" viewBox="0 0 48 48">
+          <path fill="#00832d" d="M27 24l4.7 5.4 6.3 4V14.7l-6.3 3.6z" />
+          <path fill="#0066da" d="M6 32v6a3 3 0 0 0 3 3h6l1.2-4.5L15 32l-4.5-1.3z" />
+          <path fill="#e94235" d="M15 7L6 16l4.5 1.2L15 16l1.3-4.5z" />
+          <path fill="#2684fc" d="M15 16H6v16h9z" />
+          <path fill="#00ac47" d="M42.2 11.5 38 14.7v18.6l4.2 3.3a1.1 1.1 0 0 0 1.8-.9V12.4a1.1 1.1 0 0 0-1.8-.9zM27 24v8H15v9h18a3 3 0 0 0 3-3v-6.2z" />
+          <path fill="#ffba00" d="M33 7H15v9h12v8l9-7.5V10a3 3 0 0 0-3-3z" />
+        </svg>
+      </div>
+      <h1>Google Meet</h1>
+      <p id="status">Carregando…</p>
+      <div class="spinner" id="spinner" role="progressbar" aria-label="Carregando"></div>
+      <p id="code" hidden></p>
+      <button id="open" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        </svg>
+        Abrir Google Meet
+      </button>
+    </main>
+    <script type="module" src="/src/client.ts"></script>
+  </body>
+</html>

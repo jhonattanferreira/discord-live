@@ -1,90 +1,96 @@
 # discord-live
 
-Bot do Discord que cria um Google Meet quando a primeira pessoa entra num canal de voz e posta o link num canal de texto. Enquanto houver gente no canal, o mesmo Meet é reutilizado. Quando o canal esvazia, a associação é descartada e a próxima entrada cria um Meet novo.
+Activity do Discord que mostra um botão **Abrir Google Meet** dentro do canal de voz. O clique abre no navegador o Meet daquele canal. Roda de graça no Cloudflare Workers, sem máquina ligada.
 
-## Requisitos
+```
+Activity (página em dist/)  →  /api/meeting?channel_id=…  →  Worker
+                                                             ├─ KV: canal → Meet já criado
+                                                             └─ senão: cria no Google Meet e salva
+```
 
-- [mise](https://mise.jdx.dev/) (instala o Python fixado em `mise.toml`)
-- [Poetry](https://python-poetry.org/) 2.x
+- `index.html` e `src/client.ts`: a página, com o Embedded App SDK do Discord.
+- `worker/index.ts`: a API. Confere com o token do bot que o canal é um canal de voz do seu servidor, cria o Meet com acesso aberto (entra sem pedir para participar) e guarda no KV.
+- Cada canal de voz tem um link fixo: o Meet é criado na primeira vez e reaproveitado depois.
+- `scripts/google-login.mjs`: login OAuth na conta Google, que envia as credenciais como secrets do Worker.
+
+## Pré-requisitos
+
+- [mise](https://mise.jdx.dev/) ativado no shell (`eval "$(mise activate zsh)"` no `~/.zshrc`). Ele instala o Node e o pnpm fixados no `mise.toml`.
+- Conta gratuita no [Cloudflare](https://dash.cloudflare.com/sign-up).
 
 ```bash
 mise install
-poetry env use "$(mise which python)"
-poetry install
+pnpm install
 ```
 
-As dependências ficam em `.venv/` dentro do projeto, nada é instalado no sistema.
+## 1. Aplicação no Discord
 
-## 1. Criar o bot no Discord
+1. Em https://discord.com/developers/applications, crie uma aplicação.
+2. Na aba **Bot**, gere o token (**Reset Token**). O Worker usa o token para confirmar que o canal existe. O bot não precisa ficar rodando.
+3. Em **OAuth2 → URL Generator**, marque `bot` e `applications.commands`, abra a URL e adicione ao servidor. Nenhuma permissão extra é necessária.
+4. Em **General Information**, copie o **Application ID** e cole no `wrangler.jsonc` (`DISCORD_CLIENT_ID`).
 
-1. Acesse https://discord.com/developers/applications e clique em **New Application**.
-2. Na aba **Bot**, clique em **Reset Token** e copie o token (vai em `DISCORD_BOT_TOKEN`).
+## 2. Google Cloud
 
-## 2. Intents e permissões
+1. Em https://console.cloud.google.com/, crie um projeto.
+2. Em **APIs e serviços → Biblioteca**, ative a **Google Meet REST API**.
+3. Em **Google Auth Platform**:
+   - **Branding**: nome do app e e-mail de suporte.
+   - **Público-alvo**: *Externo*. Adicione sua conta em **Usuários de teste**, ou publique o app (veja a observação no final).
+   - **Acesso a dados**: escopo `https://www.googleapis.com/auth/meetings.space.created`.
+   - **Clientes → Criar cliente**: tipo **App para computador**. Baixe o JSON e salve como `credentials.json` na raiz do repo.
 
-- **Intents:** nenhum intent privilegiado é necessário. O bot usa só os padrões (`guilds` e `voice_states`).
-- **Permissões no servidor:** `View Channels` e `Send Messages` no canal de texto onde os links serão postados.
-
-## 3. Convidar o bot
-
-1. Em **OAuth2 → URL Generator**, marque o scope `bot`.
-2. Em *Bot Permissions*, marque `View Channels` e `Send Messages`.
-3. Abra a URL gerada e escolha o servidor.
-
-Para pegar IDs de canais: *Configurações do usuário → Avançado → Modo desenvolvedor*, depois botão direito no canal → **Copiar ID do canal**.
-
-## 4. Projeto no Google Cloud
-
-1. Acesse https://console.cloud.google.com/ e crie um projeto (ou use um existente).
-
-## 5. Habilitar a Google Meet API
-
-1. **APIs e serviços → Biblioteca**, procure **Google Meet REST API** e clique em **Ativar**.
-
-## 6. Configurar o OAuth
-
-1. **Google Auth Platform → Branding**: preencha nome do app e e-mail de suporte.
-2. **Público-alvo**: tipo *Externo* (ou *Interno* se for Workspace) e adicione sua conta Google em **Usuários de teste**.
-3. **Acesso a dados**: adicione o escopo `https://www.googleapis.com/auth/meetings.space.created`.
-
-> Com o app em modo *Teste*, o Google expira o refresh token em 7 dias. Para uso contínuo, publique o app (**Público-alvo → Publicar app**). Para um app pessoal não é preciso passar pela verificação, só aceitar o aviso de "app não verificado" no login.
-
-## 7. Gerar o `credentials.json`
-
-1. **Google Auth Platform → Clientes → Criar cliente**.
-2. Tipo de aplicativo: **App para computador** (Desktop app).
-3. Baixe o JSON e salve na raiz do projeto como `credentials.json`.
-
-## 8. Configurar o `.env`
+## 3. Cloudflare
 
 ```bash
-cp .env.example .env
+pnpm wrangler login
+pnpm wrangler kv namespace create MEETINGS   # cole o id no wrangler.jsonc
+pnpm run deploy                              # mostra a URL *.workers.dev
 ```
 
-```env
-DISCORD_BOT_TOKEN=seu-token
-DISCORD_TEXT_CHANNEL_ID=123456789012345678
-# Opcional: só estes canais de voz. Vazio = todos
-DISCORD_VOICE_CHANNEL_IDS=111,222
-```
+Use `pnpm run deploy`, não `pnpm deploy` (esse é um comando nativo do pnpm).
 
-`credentials.json`, `token.json` e `.env` estão no `.gitignore`.
+## 4. Secrets
 
-## 9. Executar
+Rode num terminal interativo (o wrangler pede o valor):
 
 ```bash
-poetry run discord-live
+pnpm wrangler secret put DISCORD_BOT_TOKEN   # cole o token do bot
+pnpm google-login                            # login no Google e envio das credenciais
 ```
 
-## 10. Primeiro login OAuth
+Secrets ficam criptografados no Cloudflare, nunca no repo.
 
-Na primeira execução (sem `token.json`) o bot abre o navegador para você autorizar sua conta Google. Depois disso o token é salvo em `token.json` e renovado automaticamente.
+## 5. Habilitar a Activity no Discord
 
-Se o token for revogado ou expirar de vez, apague o `token.json` e rode de novo para autorizar.
+No Developer Portal, na sua aplicação:
 
-> A primeira execução precisa de um navegador. Para rodar num servidor, faça o login localmente e copie o `token.json` para lá.
+1. **Activities → Settings**: ative **Enable Activities** e marque as plataformas (Web, Desktop…).
+2. **Activities → URL Mappings**: prefixo `/`, target `<nome-do-worker>.<seu-subdominio>.workers.dev` (sem `https://`).
 
-## Limitações do MVP
+O Discord cria sozinho o comando `/launch`, que inicia a Activity.
 
-- O estado (canal → Meet) fica só em memória. Se o bot reiniciar com gente no canal, a próxima entrada nesse canal cria um Meet novo.
-- O Meet não é encerrado no Google quando o canal esvazia. O bot só esquece o link.
+## 6. Usar
+
+1. Entre num canal de voz do servidor.
+2. Clique no ícone de **Activities** (🚀) ou digite `/launch` e escolha a aplicação.
+3. Clique em **Abrir Google Meet**.
+
+## Desenvolvimento
+
+- `pnpm vite`: abre a página local em modo pré-visualização, com um link de exemplo. Fora do Discord o SDK não conecta.
+- `pnpm typecheck`: checa os tipos da página e do Worker.
+- `pnpm wrangler tail`: logs do Worker em tempo real.
+
+## Trocar o link de um canal
+
+```bash
+pnpm wrangler kv key delete --remote --binding MEETINGS "channel:<ID_DO_CANAL>"
+```
+
+O próximo acesso cria um Meet novo.
+
+## Observações
+
+- Com o app OAuth do Google em modo *Teste*, o refresh token expira em 7 dias e a criação de Meets passa a falhar. Publique o app (**Público-alvo → Publicar app**, sem precisar de verificação para uso pessoal) e rode `pnpm google-login` de novo.
+- Enquanto o app do Discord não for verificado, pode ser que só você e a equipe do app no Developer Portal consigam abrir a Activity. Confira com outra conta.

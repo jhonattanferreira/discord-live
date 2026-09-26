@@ -2,8 +2,9 @@
 credentials.json
 token.json
 .env
+.dev.vars
 
-# Python
-.venv/
-__pycache__/
-*.pyc
+# Node / Cloudflare
+node_modules/
+dist/
+.wrangler/
